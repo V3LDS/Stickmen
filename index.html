@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stickman Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+            background-color: #222;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #ui-overlay > div {
+            pointer-events: auto;
+        }
+        
+        #main-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        
+        #pause-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+        
+        .menu-title {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background-color: #4a90e2;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.7);
+        }
+        
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .tab-content.active {
+            display: flex;
+        }
+        
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .map-card {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            height: 100px;
+        }
+        
+        .map-card.selected {
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.7);
+            border: 2px solid #4a90e2;
+        }
+        
+        .map-preview {
+            width: 100%;
+            height: 70px;
+            background-color: #222;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .map-name {
+            color: white;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .match-card {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            color: white;
+        }
+        
+        .match-card.selected {
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.7);
+            border: 2px solid #4a90e2;
+        }
+        
+        .match-title {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .match-description {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .controls-section {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .controls-title {
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .control-key {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+        
+        .control-action {
+            color: white;
+        }
+        
+        .button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            background: linear-gradient(to bottom, #4a90e2, #3570b2);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .button:hover {
+            background: linear-gradient(to bottom, #5aa0f2, #4580c2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 100px;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .player-score {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .player-label {
+            font-weight: bold;
+            color: #4a90e2;
+        }
+        
+        .power-up-indicator {
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .power-up-speed {
+            background-color: rgba(255, 215, 0, 0.3);
+            border: 1px solid gold;
+        }
+        
+        .power-up-jump {
+            background-color: rgba(0, 255, 0, 0.3);
+            border: 1px solid lime;
+        }
+        
+        .power-up-strength {
+            background-color: rgba(255, 0, 0, 0.3);
+            border: 1px solid red;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+        
+        <div id="ui-overlay">
+            <div id="score-display" class="score-display">
+                <div class="player-score">
+                    <span class="player-label">P1:</span>
+                    <span id="player1-score">0</span>
+                    <span id="player1-power-up" class="power-up-indicator"></span>
+                </div>
+                <div class="player-score">
+                    <span class="player-label">P2:</span>
+                    <span id="player2-score">0</span>
+                    <span id="player2-power-up" class="power-up-indicator"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="main-menu">
+            <h1 class="menu-title">Stickman Battle</h1>
+            <div class="menu-container">
+                <div class="tab-container">
+                    <button class="tab active" data-tab="maps">Maps</button>
+                    <button class="tab" data-tab="match">Match</button>
+                    <button class="tab" data-tab="controls">Controls</button>
+                </div>
+                
+                <div class="tab-content active" id="maps-tab">
+                    <div class="map-grid">
+                        <div class="map-card selected" data-map="arena">
+                            <div class="map-preview">Arena</div>
+                            <div class="map-name">Basic Arena</div>
+                        </div>
+                        <div class="map-card" data-map="platforms">
+                            <div class="map-preview">Platforms</div>
+                            <div class="map-name">Floating Platforms</div>
+                        </div>
+                        <div class="map-card" data-map="obstacles">
+                            <div class="map-preview">Obstacles</div>
+                            <div class="map-name">Combat Arena</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="match-tab">
+                    <div class="match-card selected" data-mode="firstToThree">
+                        <div class="match-title">First to 3</div>
+                        <div class="match-description">First player to win 3 rounds wins the match</div>
+                    </div>
+                    <div class="match-card" data-mode="bestOfFive">
+                        <div class="match-title">Best of 5</div>
+                        <div class="match-description">Play 5 rounds, most wins takes the match</div>
+                    </div>
+                    <div class="match-card" data-mode="timeAttack">
+                        <div class="match-title">Time Attack</div>
+                        <div class="match-description">Most wins in 2 minutes</div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="controls-tab">
+                    <div class="controls-grid">
+                        <div class="controls-section">
+                            <div class="controls-title">Player 1</div>
+                            <div class="control-item">
+                                <span class="control-key">A / D</span>
+                                <span class="control-action">Move Left / Right</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">W</span>
+                                <span class="control-action">Jump</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">S</span>
+                                <span class="control-action">Duck</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">Q</span>
+                                <span class="control-action">Punch</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">E</span>
+                                <span class="control-action">Kick</span>
+                            </div>
+                        </div>
+                        <div class="controls-section">
+                            <div class="controls-title">Player 2</div>
+                            <div class="control-item">
+                                <span class="control-key">← / →</span>
+                                <span class="control-action">Move Left / Right</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">↑</span>
+                                <span class="control-action">Jump</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">↓</span>
+                                <span class="control-action">Duck</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">.</span>
+                                <span class="control-action">Punch</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">/</span>
+                                <span class="control-action">Kick</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="start-game" class="button">Start Game</button>
+            </div>
+        </div>
+        
+        <div id="pause-menu">
+            <h2 class="menu-title">Game Paused</h2>
+            <div class="menu-container">
+                <button id="resume-game" class="button">Resume Game</button>
+                <button id="return-to-menu" class="button">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = -12;
+        const MOVEMENT_SPEED = 5;
+        const ATTACK_COOLDOWN = 20;
+        const KNOCKBACK_FORCE = 10;
+        const POWER_UP_DURATION = 300; // frames (about 5 seconds)
+        const POWER_UP_SPAWN_RATE = 0.005; // chance per frame
+        
+        // Power-up Types
+        const POWER_UP_TYPES = {
+            SPEED: 'speed',
+            JUMP: 'jump',
+            STRENGTH: 'strength'
+        };
+        
+        // Game Maps
+        const MAPS = {
+            arena: {
+                name: 'Basic Arena',
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50 } // Ground
+                ],
+                background: '#222'
+            },
+            platforms: {
+                name: 'Floating Platforms',
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50 }, // Ground
+                    { x: 200, y: 450, width: 100, height: 20 },
+                    { x: 500, y: 450, width: 100, height: 20 },
+                    { x: 350, y: 350, width: 100, height: 20 }
+                ],
+                background: '#333'
+            },
+            obstacles: {
+                name: 'Combat Arena',
+                platforms: [
+                    { x: 0, y: 550, width: 800, height: 50 }, // Ground
+                    { x: 350, y: 450, width: 100, height: 100 }, // Center block
+                    { x: 100, y: 450, width: 100, height: 20 }, // Left platform
+                    { x: 600, y: 450, width: 100, height: 20 } // Right platform
+                ],
+                background: '#252525'
+            }
+        };
+        
+        // Game State
+        let gameState = {
+            isPlaying: false,
+            isPaused: false,
+            selectedMap: 'arena',
+            selectedMode: 'firstToThree',
+            player1: {
+                x: 200,
+                y: 300,
+                width: 30,
+                height: 60,
+                velocityX: 0,
+                velocityY: 0,
+                isJumping: false,
+                isDucking: false,
+                isAttacking: false,
+                attackCooldown: 0,
+                attackType: null,
+                facing: 'right',
+                score: 0,
+                powerUp: null,
+                powerUpTimer: 0,
+                color: '#4a90e2'
+            },
+            player2: {
+                x: 600,
+                y: 300,
+                width: 30,
+                height: 60,
+                velocityX: 0,
+                velocityY: 0,
+                isJumping: false,
+                isDucking: false,
+                isAttacking: false,
+                attackCooldown: 0,
+                attackType: null,
+                facing: 'left',
+                score: 0,
+                powerUp: null,
+                powerUpTimer: 0,
+                color: '#e24a4a'
+            },
+            powerUps: [],
+            keys: {}
+        };
+        
+        // DOM Elements
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const mainMenu = document.getElementById('main-menu');
+        const pauseMenu = document.getElementById('pause-menu');
+        const startGameBtn = document.getElementById('start-game');
+        const resumeGameBtn = document.getElementById('resume-game');
+        const returnToMenuBtn = document.getElementById('return-to-menu');
+        const mapCards = document.querySelectorAll('.map-card');
+        const matchCards = document.querySelectorAll('.match-card');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const player1ScoreDisplay = document.getElementById('player1-score');
+        const player2ScoreDisplay = document.getElementById('player2-score');
+        const player1PowerUpDisplay = document.getElementById('player1-power-up');
+        const player2PowerUpDisplay = document.getElementById('player2-power-up');
+        
+        // Event Listeners
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        
+        startGameBtn.addEventListener('click', startGame);
+        resumeGameBtn.addEventListener('click', resumeGame);
+        returnToMenuBtn.addEventListener('click', returnToMenu);
+        
+        mapCards.forEach(card => {
+            card.addEventListener('click', () => {
+                mapCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                gameState.selectedMap = card.dataset.map;
+            });
+        });
+        
+        matchCards.forEach(card => {
+            card.addEventListener('click', () => {
+                matchCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                gameState.selectedMode = card.dataset.mode;
+            });
+        });
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+        
+        // Main Game Functions
+        function startGame() {
+            resetGame();
+            gameState.isPlaying = true;
+            mainMenu.style.display = 'none';
+            gameLoop();
+        }
+        
+        function pauseGame() {
+            gameState.isPaused = true;
+            pauseMenu.style.display = 'flex';
+        }
+        
+        function resumeGame() {
+            gameState.isPaused = false;
+            pauseMenu.style.display = 'none';
+            gameLoop();
+        }
+        
+        function returnToMenu() {
+            gameState.isPlaying = false;
+            gameState.isPaused = false;
+            pauseMenu.style.display = 'none';
+            mainMenu.style.display = 'flex';
+        }
+        
+        function resetGame() {
+            gameState.player1 = {
+                x: 200,
+                y: 300,
+                width: 30,
+                height: 60,
+                velocityX: 0,
+                velocityY: 0,
+                isJumping: false,
+                isDucking: false,
+                isAttacking: false,
+                attackCooldown: 0,
+                attackType: null,
+                facing: 'right',
+                powerUp: null,
+                powerUpTimer: 0,
+                color: '#4a90e2'
+            };
+            
+            gameState.player2 = {
+                x: 600,
+                y: 300,
+                width: 30,
+                height: 60,
+                velocityX: 0,
+                velocityY: 0,
+                isJumping: false,
+                isDucking: false,
+                isAttacking: false,
+                attackCooldown: 0,
+                attackType: null,
+                facing: 'left',
+                powerUp: null,
+                powerUpTimer: 0,
+                color: '#e24a4a'
+            };
+            
+            gameState.powerUps = [];
+        }
+        
+        function resetRound() {
+            gameState.player1.x = 200;
+            gameState.player1.y = 300;
+            gameState.player1.velocityX = 0;
+            gameState.player1.velocityY = 0;
+            gameState.player1.isJumping = false;
+            gameState.player1.isDucking = false;
+            gameState.player1.isAttacking = false;
+            gameState.player1.attackCooldown = 0;
+            gameState.player1.attackType = null;
+            
+            gameState.player2.x = 600;
+            gameState.player2.y = 300;
+            gameState.player2.velocityX = 0;
+            gameState.player2.velocityY = 0;
+            gameState.player2.isJumping = false;
+            gameState.player2.isDucking = false;
+            gameState.player2.isAttacking = false;
+            gameState.player2.attackCooldown = 0;
+            gameState.player2.attackType = null;
+            
+            gameState.powerUps = [];
+        }
+        
+        function handleKeyDown(e) {
+            gameState.keys[e.key] = true;
+            
+            // ESC key to pause/resume
+            if (e.key === 'Escape' && gameState.isPlaying) {
+                if (gameState.isPaused) {
+                    resumeGame();
+                } else {
+                    pauseGame();
+                }
+            }
+        }
+        
+        function handleKeyUp(e) {
+            gameState.keys[e.key] = false;
+        }
+        
+        function gameLoop() {
+            if (!gameState.isPlaying) return;
+            if (gameState.isPaused) return;
+            
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function update() {
+            updatePlayers();
+            updatePowerUps();
+            handleCollisions();
+            checkRoundEnd();
+        }
+        
+        function updatePlayers() {
+            // Player 1 Controls
+            if (gameState.keys['a']) {
+                gameState.player1.velocityX = -(gameState.player1.powerUp === POWER_UP_TYPES.SPEED ? MOVEMENT_SPEED * 1.5 : MOVEMENT_SPEED);
+                gameState.player1.facing = 'left';
+            } else if (gameState.keys['d']) {
+                gameState.player1.velocityX = (gameState.player1.powerUp === POWER_UP_TYPES.SPEED ? MOVEMENT_SPEED * 1.5 : MOVEMENT_SPEED);
+                gameState.player1.facing = 'right';
+            } else {
+                gameState.player1.velocityX = 0;
+            }
+            
+            if (gameState.keys['w'] && !gameState.player1.isJumping) {
+                gameState.player1.velocityY = gameState.player1.powerUp === POWER_UP_TYPES.JUMP ? JUMP_FORCE * 1.3 : JUMP_FORCE;
+                gameState.player1.isJumping = true;
+            }
+            
+            if (gameState.keys['s']) {
+                gameState.player1.isDucking = true;
+                gameState.player1.height = 30;
+            } else {
+                gameState.player1.isDucking = false;
+                gameState.player1.height = 60;
+            }
+            
+            if (gameState.keys['q'] && gameState.player1.attackCooldown === 0) {
+                gameState.player1.isAttacking = true;
+                gameState.player1.attackType = 'punch';
+                gameState.player1.attackCooldown = ATTACK_COOLDOWN;
+            }
+            
+            if (gameState.keys['e'] && gameState.player1.attackCooldown === 0) {
+                gameState.player1.isAttacking = true;
+                gameState.player1.attackType = 'kick';
+                gameState.player1.attackCooldown = ATTACK_COOLDOWN;
+            }
+            
+            // Player 2 Controls
+            if (gameState.keys['ArrowLeft']) {
+                gameState.player2.velocityX = -(gameState.player2.powerUp === POWER_UP_TYPES.SPEED ? MOVEMENT_SPEED * 1.5 : MOVEMENT_SPEED);
+                gameState.player2.facing = 'left';
+            } else if (gameState.keys['ArrowRight']) {
+                gameState.player2.velocityX = (gameState.player2.powerUp === POWER_UP_TYPES.SPEED ? MOVEMENT_SPEED * 1.5 : MOVEMENT_SPEED);
+                gameState.player2.facing = 'right';
+            } else {
+                gameState.player2.velocityX = 0;
+            }
+            
+            if (gameState.keys['ArrowUp'] && !gameState.player2.isJumping) {
+                gameState.player2.velocityY = gameState.player2.powerUp === POWER_UP_TYPES.JUMP ? JUMP_FORCE * 1.3 : JUMP_FORCE;
+                gameState.player2.isJumping = true;
+            }
+            
+            if (gameState.keys['ArrowDown']) {
+                gameState.player2.isDucking = true;
+                gameState.player2.height = 30;
+            } else {
+                gameState.player2.isDucking = false;
+                gameState.player2.height = 60;
+            }
+            
+            if (gameState.keys['.'] && gameState.player2.attackCooldown === 0) {
+                gameState.player2.isAttacking = true;
+                gameState.player2.attackType = 'punch';
+                gameState.player2.attackCooldown = ATTACK_COOLDOWN;
+            }
+            
+            if (gameState.keys['/'] && gameState.player2.attackCooldown === 0) {
+                gameState.player2.isAttacking = true;
+                gameState.player2.attackType = 'kick';
+                gameState.player2.attackCooldown = ATTACK_COOLDOWN;
+            }
+            
+            // Apply Physics
+            applyPhysics(gameState.player1);
+            applyPhysics(gameState.player2);
+            
+            // Update Cooldowns and Timers
+            if (gameState.player1.attackCooldown > 0) {
+                gameState.player1.attackCooldown--;
+                if (gameState.player1.attackCooldown === 0) {
+                    gameState.player1.isAttacking = false;
+                    gameState.player1.attackType = null;
+                }
+            }
+            
+            if (gameState.player2.attackCooldown > 0) {
+                gameState.player2.attackCooldown--;
+                if (gameState.player2.attackCooldown === 0) {
+                    gameState.player2.isAttacking = false;
+                    gameState.player2.attackType = null;
+                }
+            }
+            
+            // Update Power-up Timers
+            if (gameState.player1.powerUp) {
+                gameState.player1.powerUpTimer--;
+                if (gameState.player1.powerUpTimer <= 0) {
+                    gameState.player1.powerUp = null;
+                    updatePowerUpDisplay();
+                }
+            }
+            
+            if (gameState.player2.powerUp) {
+                gameState.player2.powerUpTimer--;
+                if (gameState.player2.powerUpTimer <= 0) {
+                    gameState.player2.powerUp = null;
+                    updatePowerUpDisplay();
+                }
+            }
+        }
+        
+        function applyPhysics(player) {
+            // Apply Gravity
+            player.velocityY += GRAVITY;
+            
+            // Update Position
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+            
+            // Constrain to Canvas
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            
+            // Check for Platform Collisions
+            let onPlatform = false;
+            const map = MAPS[gameState.selectedMap];
+            
+            for (const platform of map.platforms) {
+                // Check if player is on a platform
+                if (player.velocityY >= 0 &&
+                    player.y + player.height >= platform.y &&
+                    player.y + player.height <= platform.y + 10 &&
+                    player.x + player.width > platform.x &&
+                    player.x < platform.x + platform.width) {
+                    player.y = platform.y - player.height;
+                    player.velocityY = 0;
+                    player.isJumping = false;
+                    onPlatform = true;
+                }
+                
+                // Check if player hits the bottom of a platform
+                if (player.velocityY < 0 &&
+                    player.y <= platform.y + platform.height &&
+                    player.y >= platform.y + platform.height - 10 &&
+                    player.x + player.width > platform.x &&
+                    player.x < platform.x + platform.width) {
+                    player.y = platform.y + platform.height;
+                    player.velocityY = 0;
+                }
+                
+                // Check if player hits the side of a platform
+                if (player.y + player.height > platform.y &&
+                    player.y < platform.y + platform.height) {
+                    // Left side collision
+                    if (player.x + player.width >= platform.x &&
+                        player.x + player.width <= platform.x + 10 &&
+                        player.velocityX > 0) {
+                        player.x = platform.x - player.width;
+                        player.velocityX = 0;
+                    }
+                    
+                    // Right side collision
+                    if (player.x <= platform.x + platform.width &&
+                        player.x >= platform.x + platform.width - 10 &&
+                        player.velocityX < 0) {
+                        player.x = platform.x + platform.width;
+                        player.velocityX = 0;
+                    }
+                }
+            }
+            
+            // Reset jump if player falls off the map
+            if (player.y > canvas.height) {
+                player.y = 300;
+                player.velocityY = 0;
+                player.isJumping = false;
+            }
+        }
+        
+        function updatePowerUps() {
+            // Spawn Power-ups randomly
+            if (Math.random() < POWER_UP_SPAWN_RATE) {
+                const typeKeys = Object.keys(POWER_UP_TYPES);
+                const randomType = POWER_UP_TYPES[typeKeys[Math.floor(Math.random() * typeKeys.length)]];
+                
+                gameState.powerUps.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: Math.random() * 300 + 100,
+                    width: 30,
+                    height: 30,
+                    type: randomType
+                });
+            }
+        }
+        
+        function handleCollisions() {
+            // Player Attacks
+            if (gameState.player1.isAttacking) {
+                const attackRange = 50;
+                const attackDamage = gameState.player1.powerUp === POWER_UP_TYPES.STRENGTH ? 1.5 : 1;
+                const attackBox = {
+                    x: gameState.player1.facing === 'right' ? gameState.player1.x + gameState.player1.width : gameState.player1.x - attackRange,
+                    y: gameState.player1.y + (gameState.player1.isDucking ? 15 : 20),
+                    width: attackRange,
+                    height: 20
+                };
+                
+                if (checkCollision(attackBox, gameState.player2)) {
+                    const knockbackDirection = gameState.player1.facing === 'right' ? 1 : -1;
+                    gameState.player2.velocityX = KNOCKBACK_FORCE * knockbackDirection * attackDamage;
+                    gameState.player2.velocityY = -KNOCKBACK_FORCE / 2;
+                    gameState.player2.isJumping = true;
+                }
+            }
+            
+            if (gameState.player2.isAttacking) {
+                const attackRange = 50;
+                const attackDamage = gameState.player2.powerUp === POWER_UP_TYPES.STRENGTH ? 1.5 : 1;
+                const attackBox = {
+                    x: gameState.player2.facing === 'right' ? gameState.player2.x + gameState.player2.width : gameState.player2.x - attackRange,
+                    y: gameState.player2.y + (gameState.player2.isDucking ? 15 : 20),
+                    width: attackRange,
+                    height: 20
+                };
+                
+                if (checkCollision(attackBox, gameState.player1)) {
+                    const knockbackDirection = gameState.player2.facing === 'right' ? 1 : -1;
+                    gameState.player1.velocityX = KNOCKBACK_FORCE * knockbackDirection * attackDamage;
+                    gameState.player1.velocityY = -KNOCKBACK_FORCE / 2;
+                    gameState.player1.isJumping = true;
+                }
+            }
+            
+            // Power-up Collisions
+            for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+                const powerUp = gameState.powerUps[i];
+                
+                if (checkCollision(powerUp, gameState.player1)) {
+                    gameState.player1.powerUp = powerUp.type;
+                    gameState.player1.powerUpTimer = POWER_UP_DURATION;
+                    gameState.powerUps.splice(i, 1);
+                    updatePowerUpDisplay();
+                    continue;
+                }
+                
+                if (checkCollision(powerUp, gameState.player2)) {
+                    gameState.player2.powerUp = powerUp.type;
+                    gameState.player2.powerUpTimer = POWER_UP_DURATION;
+                    gameState.powerUps.splice(i, 1);
+                    updatePowerUpDisplay();
+                }
+            }
+        }
+        
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y;
+        }
+        
+        function checkRoundEnd() {
+            if (gameState.player1.y > canvas.height) {
+                gameState.player2.score++;
+                updateScoreDisplay();
+                resetRound();
+                
+                if (checkMatchEnd()) {
+                    setTimeout(returnToMenu, 1000);
+                }
+            }
+            
+            if (gameState.player2.y > canvas.height) {
+                gameState.player1.score++;
+                updateScoreDisplay();
+                resetRound();
+                
+                if (checkMatchEnd()) {
+                    setTimeout(returnToMenu, 1000);
+                }
+            }
+        }
+        
+        function checkMatchEnd() {
+            switch (gameState.selectedMode) {
+                case 'firstToThree':
+                    return gameState.player1.score >= 3 || gameState.player2.score >= 3;
+                case 'bestOfFive':
+                    return gameState.player1.score >= 3 || gameState.player2.score >= 3;
+                case 'timeAttack':
+                    // Time attack would need a timer implementation
+                    return false;
+                default:
+                    return false;
+            }
+        }
+        
+        function updateScoreDisplay() {
+            player1ScoreDisplay.textContent = gameState.player1.score;
+            player2ScoreDisplay.textContent = gameState.player2.score;
+        }
+        
+        function updatePowerUpDisplay() {
+            player1PowerUpDisplay.textContent = gameState.player1.powerUp ? gameState.player1.powerUp.toUpperCase() : '';
+            player1PowerUpDisplay.className = 'power-up-indicator';
+            
+            if (gameState.player1.powerUp) {
+                player1PowerUpDisplay.classList.add(`power-up-${gameState.player1.powerUp}`);
+            }
+            
+            player2PowerUpDisplay.textContent = gameState.player2.powerUp ? gameState.player2.powerUp.toUpperCase() : '';
+            player2PowerUpDisplay.className = 'power-up-indicator';
+            
+            if (gameState.player2.powerUp) {
+                player2PowerUpDisplay.classList.add(`power-up-${gameState.player2.powerUp}`);
+            }
+        }
+        
+        function render() {
+            const map = MAPS[gameState.selectedMap];
+            
+            // Clear Canvas
+            ctx.fillStyle = map.background || '#222';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Platforms
+            ctx.fillStyle = '#555';
+            for (const platform of map.platforms) {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Platform edge highlighting
+                ctx.fillStyle = '#777';
+                ctx.fillRect(platform.x, platform.y, platform.width, 5);
+                ctx.fillStyle = '#555';
+            }
+            
+            // Draw Power-ups
+            for (const powerUp of gameState.powerUps) {
+                switch (powerUp.type) {
+                    case POWER_UP_TYPES.SPEED:
+                        ctx.fillStyle = 'gold';
+                        break;
+                    case POWER_UP_TYPES.JUMP:
+                        ctx.fillStyle = 'lime';
+                        break;
+                    case POWER_UP_TYPES.STRENGTH:
+                        ctx.fillStyle = 'red';
+                        break;
+                    default:
+                        ctx.fillStyle = 'white';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(powerUp.x + powerUp.width / 2, powerUp.y + powerUp.height / 2, powerUp.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw a star shape
+                const centerX = powerUp.x + powerUp.width / 2;
+                const centerY = powerUp.y + powerUp.height / 2;
+                const spikes = 5;
+                const outerRadius = powerUp.width / 2;
+                const innerRadius = powerUp.width / 4;
+                
+                ctx.beginPath();
+                let rot = Math.PI / 2 * 3;
+                let x = centerX;
+                let y = centerY;
+                ctx.moveTo(centerX, centerY - outerRadius);
+                
+                for (let i = 0; i < spikes; i++) {
+                    x = centerX + Math.cos(rot) * outerRadius;
+                    y = centerY + Math.sin(rot) * outerRadius;
+                    ctx.lineTo(x, y);
+                    rot += Math.PI / spikes;
+                    
+                    x = centerX + Math.cos(rot) * innerRadius;
+                    y = centerY + Math.sin(rot) * innerRadius;
+                    ctx.lineTo(x, y);
+                    rot += Math.PI / spikes;
+                }
+                
+                ctx.lineTo(centerX, centerY - outerRadius);
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            // Draw Players
+            // Player 1
+            drawPlayer(gameState.player1);
+            
+            // Player 2
+            drawPlayer(gameState.player2);
+            
+            // Draw Attack Effects
+            if (gameState.player1.isAttacking) {
+                drawAttack(gameState.player1);
+            }
+            
+            if (gameState.player2.isAttacking) {
+                drawAttack(gameState.player2);
+            }
+        }
+        
+        function drawPlayer(player) {
+            // Draw Body
+            ctx.fillStyle = player.color;
+            
+            // If the player has a power-up, add a glowing effect
+            if (player.powerUp) {
+                ctx.shadowBlur = 10;
+                
+                switch (player.powerUp) {
+                    case POWER_UP_TYPES.SPEED:
+                        ctx.shadowColor = 'gold';
+                        break;
+                    case POWER_UP_TYPES.JUMP:
+                        ctx.shadowColor = 'lime';
+                        break;
+                    case POWER_UP_TYPES.STRENGTH:
+                        ctx.shadowColor = 'red';
+                        break;
+                }
+            }
+            
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.shadowBlur = 0;
+            
+            // Draw Head
+            ctx.beginPath();
+            ctx.arc(player.x + player.width / 2, player.y - 15, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw Eyes
+            ctx.fillStyle = 'white';
+            
+            const eyeXOffset = player.facing === 'right' ? 5 : -5;
+            
+            ctx.beginPath();
+            ctx.arc(player.x + player.width / 2 + eyeXOffset, player.y - 20, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw Pupils
+            ctx.fillStyle = 'black';
+            
+            const pupilXOffset = player.facing === 'right' ? 2 : -2;
+            
+            ctx.beginPath();
+            ctx.arc(player.x + player.width / 2 + eyeXOffset + pupilXOffset, player.y - 20, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw Limbs
+            ctx.strokeStyle = player.color;
+            ctx.lineWidth = 4;
+            
+            // Arms
+            const shoulderY = player.y + 10;
+            
+            if (player.isAttacking) {
+                // Extended arm for attack
+                const elbowX = player.facing === 'right' ? player.x + player.width + 15 : player.x - 15;
+                const elbowY = shoulderY + 5;
+                
+                const handX = player.facing === 'right' ? elbowX + 20 : elbowX - 20;
+                const handY = player.attackType === 'punch' ? elbowY : elbowY + 15;
+                
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width / 2, shoulderY);
+                ctx.lineTo(elbowX, elbowY);
+                ctx.lineTo(handX, handY);
+                ctx.stroke();
+            } else {
+                // Normal arm position
+                const elbowX = player.facing === 'right' ? player.x + player.width + 5 : player.x - 5;
+                const elbowY = shoulderY + 15;
+                
+                const handX = player.facing === 'right' ? elbowX - 5 : elbowX + 5;
+                const handY = elbowY + 15;
+                
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width / 2, shoulderY);
+                ctx.lineTo(elbowX, elbowY);
+                ctx.lineTo(handX, handY);
+                ctx.stroke();
+            }
+            
+            // Legs
+            const hipY = player.y + player.height - (player.isDucking ? 10 : 20);
+            
+            if (player.isAttacking && player.attackType === 'kick') {
+                // Extended leg for kick
+                const kneeX = player.facing === 'right' ? player.x + player.width + 10 : player.x - 10;
+                const kneeY = hipY + 5;
+                
+                const footX = player.facing === 'right' ? kneeX + 20 : kneeX - 20;
+                const footY = kneeY;
+                
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width / 2, hipY);
+                ctx.lineTo(kneeX, kneeY);
+                ctx.lineTo(footX, footY);
+                ctx.stroke();
+            } else {
+                // Normal leg position
+                const kneeX = player.x + player.width / 2 - (player.facing === 'right' ? 5 : -5);
+                const kneeY = hipY + 15;
+                
+                const footX = player.x + player.width / 2 - (player.facing === 'right' ? 10 : -10);
+                const footY = kneeY + 15;
+                
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width / 2, hipY);
+                ctx.lineTo(kneeX, kneeY);
+                ctx.lineTo(footX, footY);
+                ctx.stroke();
+            }
+        }
+        
+        function drawAttack(player) {
+            const attackRange = 50;
+            const attackX = player.facing === 'right' ? player.x + player.width : player.x - attackRange;
+            const attackY = player.y + (player.isDucking ? 15 : 20);
+            
+            if (player.attackType === 'punch') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(player.facing === 'right' ? attackX + attackRange : attackX, attackY, 15, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (player.attackType === 'kick') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(player.facing === 'right' ? attackX + attackRange : attackX, attackY + 10, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    </script>
+</body>
+</html>
